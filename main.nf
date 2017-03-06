@@ -108,7 +108,6 @@ if (params.metadata) {
       tag "${info[0]}_${info[1]}_${info[2]}"
       publishDir path:"${params.out}/datasets/", mode:'symlink'
       // Cluster options
-      queue 'short-sl65,short-sl7'
       cpus 1
       memory '4GB'
 
@@ -193,7 +192,6 @@ process downloadReferenceGenome {
    // Process options
    //tag "${url}"
    // Cluster options
-   queue 'short-sl65,short-sl7'
    cpus 1
    memory '4GB'
 
@@ -216,7 +214,6 @@ process buildBWAindex {
    //tag "${index_path}"
    publishDir path: "${index_dir}", mode:'move'
    // Cluster options
-   queue 'short-sl65,short-sl7'
    cpus 1
    memory '64GB'
 
@@ -263,7 +260,6 @@ process mapReads {
    tag "${info[2]}.bam"
    publishDir path:"${params.out}/mapped/", mode:'symlink'
    // Cluster options
-   queue 'short-sl65,short-sl7'
    cpus params.cpu
    memory '32GB'
 
@@ -320,7 +316,6 @@ process ZeroneDiscretization {
    tag "${file(chip).getName()}"
    publishDir path:"${params.out}/discretized/", mode:'move'
    // Cluster options
-   queue 'short-sl65,short-sl7'
    cpus 1
    memory '16GB'
 
