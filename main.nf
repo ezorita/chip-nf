@@ -104,8 +104,14 @@ if (params.metadata) {
    .into{dataset_list}
 
    process downloadDataset {
+      // Process options
       tag "${info[0]}_${info[1]}_${info[2]}"
       publishDir path:"${params.out}/datasets/", mode:'symlink'
+      // Cluster options
+      queue 'short-sl65,short-sl7'
+      cpus 1
+      memory '4GB'
+
       input:
         val info from dataset_list
       output:
@@ -184,7 +190,13 @@ if (!params.index || bwtnotfound) {
 }
 
 process downloadReferenceGenome {
+   // Process options
    tag "${url}"
+   // Cluster options
+   queue 'short-sl65,short-sl7'
+   cpus 1
+   memory '4GB'
+
    input:
      val url from downl_fasta
    output:
@@ -200,18 +212,24 @@ process downloadReferenceGenome {
 
 
 process buildBWAindex {
-    tag "${index_path}"
-    publishDir path: "${index_dir}", mode:'move'
-    input:
-    file "${index_name}" from local_fasta
-    output:
-      val index_path into bwa_index
-      file "*.{bwt,amb,ann,pac,sa}" into index_files
-    script:
-      index_path = "${index_dir}/${index_name}"
-      """
-      bwa index ${index_name}
-      """
+   // Process options
+   tag "${index_path}"
+   publishDir path: "${index_dir}", mode:'move'
+   // Cluster options
+   queue 'short-sl65,short-sl7'
+   cpus 1
+   memory '64GB'
+
+   input:
+     file "${index_name}" from local_fasta
+   output:
+     val index_path into bwa_index
+     file "*.{bwt,amb,ann,pac,sa}" into index_files
+   script:
+     index_path = "${index_dir}/${index_name}"
+     """
+     bwa index ${index_name}
+     """
 }
 
 // Compile colortobase converter.
@@ -241,10 +259,14 @@ if (params.colorspace) {
 
 // Map reads with BWA
 process mapReads {
-  tag "${info[2]}.bam"
-  cpus params.cpu
-  maxForks 1
-  publishDir path:"${params.out}/mapped/", mode:'symlink'
+   // Process options
+   tag "${info[2]}.bam"
+   publishDir path:"${params.out}/mapped/", mode:'symlink'
+   // Cluster options
+   queue 'short-sl65,short-sl7'
+   cpus params.cpu
+   memory '32GB'
+
   input:
     file ctb from ctb_path.first()
     set info, files from fastq_files
@@ -294,17 +316,23 @@ prot_signal.mix(gene_signal).into{chip_signal}
 
 // Zerone files
 process ZeroneDiscretization {
-  tag "$chip"
-  publishDir path:"${params.out}/discretized/", mode:'move'
-  input:
-    set chip, sig_files from chip_signal
-    set input, inp_files from input_signal.first()
-  output:
-    file "${chip}.01" into chip_out
-    file "${chip}.bed" into chip_out_bed
-  script:
-    """
-    zerone -c ${params.confidence} -0 ${inp_files.join(",")} -1 ${sig_files.join(",")} > ${chip}.01
-    zerone -c ${params.confidence} -l -0 ${inp_files.join(",")} -1 ${sig_files.join(",")} > ${chip}.bed
-    """
+   // Process options
+   tag "$chip"
+   publishDir path:"${params.out}/discretized/", mode:'move'
+   // Cluster options
+   queue 'short-sl65,short-sl7'
+   cpus 1
+   memory '16GB'
+
+   input:
+     set chip, sig_files from chip_signal
+     set input, inp_files from input_signal.first()
+   output:
+     file "${chip}.01" into chip_out
+     file "${chip}.bed" into chip_out_bed
+   script:
+     """
+     zerone -c ${params.confidence} -0 ${inp_files.join(",")} -1 ${sig_files.join(",")} > ${chip}.01
+     zerone -c ${params.confidence} -l -0 ${inp_files.join(",")} -1 ${sig_files.join(",")} > ${chip}.bed
+     """
 }
