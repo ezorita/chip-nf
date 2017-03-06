@@ -191,7 +191,7 @@ if (!params.index || bwtnotfound) {
 
 process downloadReferenceGenome {
    // Process options
-   tag "${url}"
+   //tag "${url}"
    // Cluster options
    queue 'short-sl65,short-sl7'
    cpus 1
@@ -213,7 +213,7 @@ process downloadReferenceGenome {
 
 process buildBWAindex {
    // Process options
-   tag "${index_path}"
+   //tag "${index_path}"
    publishDir path: "${index_dir}", mode:'move'
    // Cluster options
    queue 'short-sl65,short-sl7'
@@ -238,7 +238,7 @@ ctb_path = Channel.create()
 
 if (params.colorspace) {
    process buildColortoBase {
-      tag "${repo_url}:${commit_id}"
+      //      tag "${repo_url}:${commit_id}"
       input:
         val repo_url from colortobase_repo
         val commit_id from colortobase_commit
@@ -317,7 +317,7 @@ prot_signal.mix(gene_signal).into{chip_signal}
 // Zerone files
 process ZeroneDiscretization {
    // Process options
-   tag "$chip"
+   tag "${file(chip).getName()}"
    publishDir path:"${params.out}/discretized/", mode:'move'
    // Cluster options
    queue 'short-sl65,short-sl7'
