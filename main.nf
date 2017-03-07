@@ -241,8 +241,8 @@ process mapReads {
    tag "${info[2]}.bam"
    publishDir path:"${params.out}/mapped/", mode:'symlink'
    // Cluster options
-   cpus params.cpu
    memory '32GB'
+   clusterOptions "-pe smp ${params.cpu}"
 
   input:
     set info, files from fastq_files
