@@ -53,9 +53,6 @@ genome_urls = [ "hg19": "http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/
                 "dm6" : "http://hgdownload.cse.ucsc.edu/goldenPath/dm6/bigZips/chromFa.tar.gz"
               ]
 
-colortobase_repo   = "https://github.com/ezorita/bioscripts"
-colortobase_commit = "3576cfd3f9a77863bd59899eaf2a2ccf5edfd148"
-
 // Set defaults.
 params.out         = "./"
 params.confidence  = 0.99
@@ -116,6 +113,14 @@ if (params.metadata) {
       output:
         set info, "*.fastq.gz" into fastq_files
       script:
+        if (info.size() < 3) {
+           log.info("format error in metadata file, ignoring line: ${info.join(',')}")
+        }
+        """
+        fastq-dump --split-files --gzip -A ${info[2]}
+        rm -f ~/ncbi/public/sra/${info[2]}.sra
+        """
+      /*
       if (info.size() == 4) {
         """
         wget ${info[3]} -O ${info[0]}_${info[1]}_${info[2]}.fastq.gz
@@ -128,6 +133,7 @@ if (params.metadata) {
       } else {
          log.info("format error in metadata file, ignoring line: ${info.join(',')}")
       }
+      */
    }
 } else {
    log.info 'sorry, --datadir option is not yet supported, please use --metadata.'
@@ -229,31 +235,6 @@ process buildBWAindex {
      """
 }
 
-// Compile colortobase converter.
-
-ctb_path = Channel.create()
-
-if (params.colorspace) {
-   process buildColortoBase {
-      //      tag "${repo_url}:${commit_id}"
-      input:
-        val repo_url from colortobase_repo
-        val commit_id from colortobase_commit
-      output:
-        file "colortobase" into ctb_path
-      script:
-        """
-        git clone ${repo_url} repo
-        cd repo; git checkout ${commit_id}; cd ..
-        make -C repo colortobase
-        mv repo/colortobase .
-        """
-   }
-} else {
-   ctb_path << 'zcat'
-}
-
-
 // Map reads with BWA
 process mapReads {
    // Process options
@@ -264,7 +245,6 @@ process mapReads {
    memory '32GB'
 
   input:
-    file ctb from ctb_path.first()
     set info, files from fastq_files
     val index_path from bwa_index.first()
   output:
@@ -272,8 +252,7 @@ process mapReads {
   script:
     filestr = files.size() == 2 ? "${files[0]} ${files[1]}" : "${files}"
     if (params.colorspace) {
-       ctb_path = (ctb.getParent().equals(null) ? '.' : ctb.getParent()) + "/" + ctb.getName()
-       filestr = files.size() == 2 ? "<(${ctb_path} ${files[0]}) <(${ctb_path} ${files[1]})" : "<(${ctb_path} ${files})"
+       filestr = files.size() == 2 ? "<(colortobase ${files[0]}) <(${ctb_path} ${files[1]})" : "<(colortobase ${files})"
     }
     ref_file = (files.size() == 2 ? files[0] : files)
     if (ref_file.getExtension() == "gz") {
