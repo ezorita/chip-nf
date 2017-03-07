@@ -242,7 +242,7 @@ process mapReads {
    publishDir path:"${params.out}/mapped/", mode:'symlink'
    // Cluster options
    memory '32GB'
-   clusterOptions "-pe smp ${params.cpu}"
+   cpus params.cpu
 
   input:
     set info, files from fastq_files
@@ -252,7 +252,7 @@ process mapReads {
   script:
     filestr = files.size() == 2 ? "${files[0]} ${files[1]}" : "${files}"
     if (params.colorspace) {
-       filestr = files.size() == 2 ? "<(colortobase ${files[0]}) <(${ctb_path} ${files[1]})" : "<(colortobase ${files})"
+       filestr = files.size() == 2 ? "<(colortobase ${files[0]}) <(colortobase ${files[1]})" : "<(colortobase ${files})"
     }
     ref_file = (files.size() == 2 ? files[0] : files)
     if (ref_file.getExtension() == "gz") {
