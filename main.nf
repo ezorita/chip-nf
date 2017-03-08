@@ -241,7 +241,7 @@ process mapReads {
    tag "${info[2]}.bam"
    publishDir path:"${params.out}/mapped/", mode:'symlink'
    // Cluster options
-   memory '32GB'
+   memory '16GB'
    cpus params.cpu
 
   input:

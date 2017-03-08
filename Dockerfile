@@ -9,6 +9,9 @@ RUN apt-get update -qq &&   \
             libxml2-dev     \
             libmagic-dev    \
             libhdf5-dev     \
+            libbz2-dev      \
+            liblzma-dev     \
+            libncurses5-dev \
             libfuse-dev &&  \
     apt-get clean &&        \
     rm -rf /var/lib/apt/lists*
@@ -40,3 +43,8 @@ RUN cd / && \
     ./ncbi-vdb/configure && make -C ncbi-vdb install && \
     ./sra-tools/configure && make -C sra-tools install && \
     mv /usr/local/ncbi/sra-tools/bin/* /usr/local/bin/
+RUN wget https://github.com/samtools/samtools/releases/download/1.3.1/samtools-1.3.1.tar.bz2 && \
+    tar -xvf samtools-1.3.1.tar.bz2 && \
+    cd samtools-1.3.1 && \
+    ./configure && \
+    make && make install
