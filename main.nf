@@ -111,7 +111,7 @@ if (params.metadata) {
       input:
         val info from dataset_list
       output:
-        set info, "*.fastq.gz" into fastq_files
+        set info, file('*.fastq.gz') into fastq_files
       script:
         if (info.size() < 3) {
            log.info("format error in metadata file, ignoring line: ${info.join(',')}")
@@ -226,12 +226,13 @@ process buildBWAindex {
    input:
      file "${index_name}" from local_fasta
    output:
-     val index_path into bwa_index
+     file "$index_path" into bwa_index
      file "*.{bwt,amb,ann,pac,sa}" into index_files
    script:
      index_path = "${index_dir}/${index_name}"
      """
      bwa index ${index_name}
+     touch ${index_path}
      """
 }
 
@@ -245,10 +246,11 @@ process mapReads {
    cpus params.cpu
 
   input:
-    set info, files from fastq_files
-    val index_path from bwa_index.first()
+    set info, file(files) from fastq_files
+    file index_path from bwa_index.first()
+    file index_files from index_files
   output:
-    set info, '*.bam' into bam_gene, bam_prot, bam_input
+    set info, file('*.bam') into bam_gene, bam_prot, bam_input
   script:
     filestr = files.size() == 2 ? "${files[0]} ${files[1]}" : "${files}"
     if (params.colorspace) {
@@ -299,8 +301,8 @@ process ZeroneDiscretization {
    memory '16GB'
 
    input:
-     set chip, sig_files from chip_signal
-     set input, inp_files from input_signal.first()
+     set chip, file(sig_files) from chip_signal
+     set input, file(inp_files) from input_signal.first()
    output:
      file "${chip}.01" into chip_out
      file "${chip}.bed" into chip_out_bed
