@@ -16,7 +16,7 @@ def print_help = {
     log.info '    --metadata METADATA_FILE     Comma separated file containing dataset information:'
     log.info '                                 Protein,Experiment,Replicate,read1URL[,read2URL]'
     log.info '    or:'
-    log.info '    --datadir FASTQ_DIR          Filename format: Protein_Experiment_Replicate[_1,_2].fastq[.gz].'
+    log.info '    --datadir FASTQ_DIR          Filename format: Protein_Experiment_UniqueID[_1,_2].fastq[.gz].'
     log.info ''
     log.info 'Reference genome options:'
     log.info ''
@@ -148,17 +148,28 @@ index_dir   = params.out + "/genome/"
 index_name  = null
 downl_fasta = Channel.create()
 local_fasta = Channel.create()
-bwa_index = Channel.create()
+bwa_index   = Channel.create()
+index_files = Channel.create()
 bwtnotfound = false
 
 if (params.index) {
    // Check bwa index files.
    fasta_ref = file("${params.index}.bwt")
-   index_ref = file(params.index)
+   index_ref = file("${params.index}")
    if (fasta_ref.isFile()) {
-      bwa_index << params.index
+      if (!index_ref.isFile()) {
+         index_ref.toFile().createNewFile()
+      }
+      bwa_index << file("${params.index}")
+      index_files << file("${index_ref}.{bwt,amb,ann,pac,sa}")
    } else if (index_ref.getExtension() in ['bwt','amb','ann','pac','sa'] && index_ref.isFile()) {
-      bwa_index << (index_ref.getParent().equals(null) ? './' : index_ref.getParent()) + index_ref.getBaseName()
+      index_str = (index_ref.getParent().equals(null) ? './' : index_ref.getParent()) + index_ref.getBaseName()
+      index_ref = file(index_str)
+      if (!index_ref.isFile()) {
+         index_ref.toFile().createNewFile()
+      }
+      bwa_index << index_ref
+      index_files << file("${index_ref}.{bwt,amb,ann,pac,sa}")
    } else {
       bwtnotfound = true
    }
@@ -242,21 +253,22 @@ process mapReads {
    tag "${info[2]}.bam"
    publishDir path:"${params.out}/mapped/", mode:'symlink'
    // Cluster options
-   memory '16GB'
+   memory '10GB'
    cpus params.cpu
 
   input:
-    set info, file(files) from fastq_files
+    set info, file(reads) from fastq_files
     file index_path from bwa_index.first()
-    file index_files from index_files
+    file index_files from index_files.first()
   output:
     set info, file('*.bam') into bam_gene, bam_prot, bam_input
   script:
-    filestr = files.size() == 2 ? "${files[0]} ${files[1]}" : "${files}"
+    def single = reads instanceof Path
+    filestr = single ? "${reads.toString()}" : "${reads[0].toString()} ${reads[1].toString()}"
     if (params.colorspace) {
-       filestr = files.size() == 2 ? "<(colortobase ${files[0]}) <(colortobase ${files[1]})" : "<(colortobase ${files})"
+       filestr = single ? "<(colortobase ${reads.toString()})" : "<(colortobase ${reads[0].toString()}) <(colortobase ${reads[1].toString()})"
     }
-    ref_file = (files.size() == 2 ? files[0] : files)
+    ref_file = (single ? reads : reads[0])
     if (ref_file.getExtension() == "gz") {
        seqlen_str = "zcat ${ref_file}"
     } else {
@@ -279,7 +291,8 @@ process mapReads {
     fi;
     echo \$SEQLEN
     echo \$OPTS
-    bwa mem -t ${params.cpu} \$OPTS ${file(index_path)} ${filestr} | samtools view -bS - > ${info[2]}.bam
+    echo ${index_path}
+    bwa mem -t ${params.cpu} \$OPTS ${index_path} ${filestr} | samtools view -bS - > ${info[2]}.bam
     """
 }
 
@@ -298,7 +311,7 @@ process ZeroneDiscretization {
    publishDir path:"${params.out}/discretized/", mode:'move'
    // Cluster options
    cpus 1
-   memory '16GB'
+   memory '10GB'
 
    input:
      set chip, file(sig_files) from chip_signal
