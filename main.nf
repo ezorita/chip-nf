@@ -205,6 +205,9 @@ if (!params.index || bwtnotfound) {
    }
 }
 
+// Close channels to submit information.
+downl_fasta.close()
+
 process downloadReferenceGenome {
    // Process options
    //tag "${url}"
@@ -225,6 +228,8 @@ process downloadReferenceGenome {
      """
 }
 
+// Close channels to submit information.
+local_fasta.close()
 
 process buildBWAindex {
    // Process options
@@ -247,13 +252,17 @@ process buildBWAindex {
      """
 }
 
+// Close channels to submit information.
+bwa_index.close()
+index_files.close()
+
 // Map reads with BWA
 process mapReads {
    // Process options
    tag "${info[2]}.bam"
    publishDir path:"${params.out}/mapped/", mode:'symlink'
    // Cluster options
-   memory '10GB'
+   memory '32GB'
    cpus params.cpu
 
   input:
